@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Branch Crisis Control: Swipe for Safety</title>
+    <style>
+        :root {
+            --bg-color: #e0e5ec;
+            --clay-shadow-outer: 9px 9px 16px rgb(163,177,198,0.6), -9px -9px 16px rgba(255,255,255, 0.5);
+            --clay-shadow-inner: inset 6px 6px 10px 0 rgba(163, 177, 198, 0.5), inset -6px -6px 10px 0 rgba(255, 255, 255, 0.8);
+            --clay-shadow-btn: 5px 5px 10px rgb(163,177,198,0.6), -5px -5px 10px rgba(255,255,255, 0.5);
+            --clay-shadow-btn-active: inset 3px 3px 5px rgb(163,177,198,0.6), inset -3px -3px 5px rgba(255,255,255, 0.5);
+            
+            --text-main: #4a5568;
+            --text-light: #718096;
+            --color-primary: #4299e1;
+            --color-success: #48bb78;
+            --color-danger: #f56565;
+            --color-warning: #ecc94b;
+            
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            overscroll-behavior-y: contain;
+        }
+
+        #app { width: 100%; max-width: 600px; min-height: 100vh; padding: 20px; display: flex; flex-direction: column; position: relative; }
+
+        .clay-card { background-color: var(--bg-color); border-radius: 24px; box-shadow: var(--clay-shadow-outer); padding: 24px; margin-bottom: 20px; }
+        .clay-panel { background-color: var(--bg-color); border-radius: 16px; box-shadow: var(--clay-shadow-inner); padding: 16px; }
+        .clay-btn { background-color: var(--bg-color); border: none; border-radius: 16px; box-shadow: var(--clay-shadow-btn); padding: 12px 24px; font-size: 16px; font-weight: bold; color: var(--text-main); cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        .clay-btn:active { box-shadow: var(--clay-shadow-btn-active); transform: translateY(2px); }
+        .clay-btn.primary { color: var(--color-primary); }
+        .clay-btn.danger { color: var(--color-danger); }
+        .clay-btn.success { color: var(--color-success); }
+        .clay-input { width: 100%; background-color: var(--bg-color); border: none; border-radius: 12px; box-shadow: var(--clay-shadow-inner); padding: 14px; font-size: 16px; color: var(--text-main); margin-bottom: 16px; outline: none; }
+        .clay-input:focus { box-shadow: inset 8px 8px 12px 0 rgba(163, 177, 198, 0.6), inset -8px -8px 12px 0 rgba(255, 255, 255, 0.9); }
+
+        .screen { display: none; flex-direction: column; flex-grow: 1; animation: fadeIn 0.4s ease-in-out; }
+        .screen.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        h1, h2, h3 { margin-bottom: 12px; color: #2d3748; }
+        p { margin-bottom: 16px; line-height: 1.6; }
+        .text-center { text-align: center; }
+        .text-sm { font-size: 0.85rem; color: var(--text-light); }
+
+        .status-container { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .status-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; font-weight: bold; }
+        .status-label { width: 120px; }
+        .progress-wrapper { flex-grow: 1; height: 12px; background-color: var(--bg-color); border-radius: 6px; box-shadow: var(--clay-shadow-inner); margin-left: 10px; overflow: hidden; }
+        .progress-bar { height: 100%; border-radius: 6px; transition: width 0.3s ease, background-color 0.3s ease; }
+
+        .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .timer-circle { width: 50px; height: 50px; border-radius: 50%; background-color: var(--bg-color); box-shadow: var(--clay-shadow-outer); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; color: var(--color-danger); border: 3px solid transparent; }
+        .card-stack { position: relative; flex-grow: 1; min-height: 350px; display: flex; align-items: center; justify-content: center; perspective: 1000px; margin-bottom: 20px; z-index: 10; }
+        .game-card { position: absolute; width: 100%; height: 100%; max-height: 400px; background-color: var(--bg-color); border-radius: 20px; box-shadow: var(--clay-shadow-outer); padding: 20px; display: flex; flex-direction: column; text-align: center; transition: transform 0.3s ease, opacity 0.3s ease; touch-action: none; z-index: 2; cursor: grab; border: 2px solid rgba(255,255,255,0.5); overflow-y: auto; }
+        .game-card:active { cursor: grabbing; }
+
+        .card-phase { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-primary); margin-bottom: 10px; font-weight: bold; }
+        .card-situation { font-size: 1.1rem; font-weight: bold; margin-bottom: 20px; flex-grow: 1; display: flex; align-items: center; justify-content: center; }
+
+        .swipe-indicators { display: flex; justify-content: space-between; gap: 10px; margin-top: auto; }
+        .swipe-hint { flex: 1; padding: 10px; border-radius: 12px; font-size: 0.85rem; background-color: rgba(255,255,255,0.3); box-shadow: var(--clay-shadow-inner); }
+        
+        .swipe-hint-left { border-left: 4px solid var(--color-success); }
+        .swipe-hint-right { border-right: 4px solid var(--color-success); }
+
+        .controls { display: flex; justify-content: center; gap: 20px; margin-top: 10px; }
+        .control-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+
+        .feedback-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); background-color: rgba(255,255,255,0.95); padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; z-index: 100; opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); width: 80%; border: 3px solid transparent; }
+        .feedback-overlay.show { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+
+        .badge-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: #fff; padding: 10px 20px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 10px; z-index: 1000; transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-weight: bold; color: var(--color-warning); }
+        .badge-container.show { transform: translateX(-50%) translateY(0); }
+
+        .debrief-list { max-height: 400px; overflow-y: auto; margin: 20px 0; padding-right: 5px; }
+        .debrief-item { padding: 15px; border-radius: 12px; margin-bottom: 10px; border-left: 5px solid gray; }
+        .debrief-item.correct { border-left-color: var(--color-success); }
+        .debrief-item.wrong { border-left-color: var(--color-danger); }
+
+        footer { margin-top: auto; padding: 20px 0 10px; text-align: center; font-size: 0.8rem; color: var(--text-light); font-weight: bold; }
+        .audio-toggle { position: absolute; top: 20px; right: 20px; width: 45px; height: 45px; border-radius: 50%; padding: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .screen.active > .clay-card:first-child { margin-top: 50px; }
+        .text-danger { color: var(--color-danger); }
+        .text-success { color: var(--color-success); }
+        .fw-bold { font-weight: bold; }
+        .mt-3 { margin-top: 15px; }
+        .mb-3 { margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <button id="btn-audio" class="clay-btn audio-toggle">🔊</button>
+    <div id="badge-notification" class="badge-container"><span style="font-size: 24px;">🏆</span><span id="badge-text">Lencana Didapatkan!</span></div>
+
+    <!-- SCREEN 1: LOGIN -->
+    <div id="screen-login" class="screen active">
+        <div class="clay-card text-center" style="margin-top: 20px;">
+            <div style="font-size: 3rem; margin-bottom: 10px;">🏦🚨</div>
+            <h1>Branch Crisis Control</h1>
+            <p class="fw-bold" style="color: var(--color-primary);">Swipe for Safety</p>
+        </div>
+        <div class="clay-card">
+            <h3>Identitas Supervisor</h3>
+            <input type="text" id="input-name" class="clay-input" placeholder="Masukkan Nama Lengkap" required>
+            <input type="number" id="input-nik" class="clay-input" placeholder="Masukkan 10 Digit NIK" required>
+            <p id="error-login" class="text-danger text-sm" style="display: none;">Mohon isi Nama dan NIK berupa tepat 10 digit angka.</p>
+        </div>
+        <div class="clay-card clay-panel">
+            <h3>Mission Briefing 📝</h3>
+            <p><strong>Kenapa Anda di sini?</strong><br>Hari ini adalah hari paling kacau. Sistem internal down, antrean mengular, target belum tercapai. Anggota tim mulai panik dan saling menyalahkan.</p>
+            <p><strong>Ingat:</strong> Emosi pemimpin menular secara neurobiologis (Emotional Contagion). Jika Anda panik, tim hancur. Jika Anda tenang, ruang aman tercipta, tim bisa berpikir jernih.</p>
+            <p class="text-sm mt-3"><strong>Cara Bermain:</strong><br>Swipe Kiri atau Kanan untuk memilih tindakan. Pilih respons asertif dan solutif!</p>
+        </div>
+        <button id="btn-start" class="clay-btn primary" style="width: 100%; padding: 15px; font-size: 1.2rem;">🚀 SAYA SIAP MEMIMPIN</button>
+        <footer>Education & Training Dept. © 2026</footer>
+    </div>
+
+    <!-- SCREEN 2: GAME AREA -->
+    <div id="screen-game" class="screen">
+        <div class="clay-card" style="padding: 15px;">
+            <div class="game-header">
+                <div style="font-size: 0.9rem; font-weight: bold;">👤 <span id="display-name">Nama</span> | NIK: <span id="display-nik">NIK</span></div>
+                <div class="timer-circle" id="timer-display">7</div>
+            </div>
+            <div class="status-container">
+                <div class="status-row"><span class="status-label">❤️ Branch Pulse</span><div class="progress-wrapper"><div class="progress-bar" id="bar-pulse" style="width: 50%;"></div></div></div>
+                <div class="status-row"><span class="status-label">🛡️ Psych Safety</span><div class="progress-wrapper"><div class="progress-bar" id="bar-safety" style="width: 50%;"></div></div></div>
+                <div class="status-row"><span class="status-label">⚙️ Action Plan</span><div class="progress-wrapper"><div class="progress-bar" id="bar-action" style="width: 50%;"></div></div></div>
+            </div>
+            <div style="text-align: center; font-size: 0.8rem; font-weight: bold; color: var(--text-light); margin-top: 10px;">Progress: <span id="progress-text">0/10</span></div>
+            <div class="progress-wrapper" style="height: 6px; margin: 5px 0 0 0;"><div class="progress-bar" id="bar-progress" style="width: 0%; background-color: var(--color-primary);"></div></div>
+        </div>
+        <div class="card-stack" id="card-container"></div>
+        <div class="controls">
+            <button id="btn-swipe-left" class="clay-btn danger control-btn">⬅️</button>
+            <button id="btn-swipe-right" class="clay-btn success control-btn">➡️</button>
+        </div>
+        <div id="feedback-overlay" class="feedback-overlay"><h2 id="feedback-title">Title</h2><p id="feedback-desc">Description</p></div>
+    </div>
+
+    <!-- SCREEN 3: RESULT -->
+    <div id="screen-result" class="screen">
+        <div class="clay-card text-center" style="margin-top: 20px;"><h1 id="result-title">Debriefing Selesai</h1><p id="result-message" class="fw-bold mt-3"></p></div>
+        <div class="clay-card">
+            <h3>Final Assessment Metrics</h3>
+            <div class="status-container mt-3">
+                <div class="status-row"><span>❤️ Branch Pulse:</span><span id="final-pulse" class="fw-bold">0%</span></div>
+                <div class="status-row"><span>🛡️ Psych Safety:</span><span id="final-safety" class="fw-bold">0%</span></div>
+                <div class="status-row"><span>⚙️ Action Plan:</span><span id="final-action" class="fw-bold">0%</span></div>
+            </div>
+        </div>
+        <div class="clay-card clay-panel"><h3>Log Keputusan Supervisor</h3><div class="debrief-list" id="debrief-list"></div></div>
+        <button id="btn-restart" class="clay-btn primary" style="width: 100%; padding: 15px; margin-bottom: 20px;">🔄 Ulangi Simulasi</button>
+        <footer>Education & Training Dept. © 2026</footer>
+    </div>
+</div>
+
+<script>
+    class GameAudio {
+        constructor() { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); this.isMuted = false; this.bgmInterval = null; this.notes = [261.63, 329.63, 392.00, 523.25]; this.noteIndex = 0; }
+        init() { if(this.ctx.state === 'suspended') this.ctx.resume(); }
+        toggleMute() { this.isMuted = !this.isMuted; if(this.isMuted) this.stopBGM(); else this.startBGM(); return this.isMuted; }
+        playTone(freq, type, duration, vol) { if(this.isMuted) return; const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain(); osc.type = type; osc.frequency.setValueAtTime(freq, this.ctx.currentTime); gain.gain.setValueAtTime(vol, this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration); osc.connect(gain); gain.connect(this.ctx.destination); osc.start(); osc.stop(this.ctx.currentTime + duration); }
+        playCorrect() { this.playTone(880, 'sine', 0.1, 0.5); setTimeout(() => this.playTone(1108.73, 'sine', 0.3, 0.5), 100); }
+        playWrong() { this.playTone(300, 'sawtooth', 0.1, 0.5); setTimeout(() => this.playTone(250, 'sawtooth', 0.3, 0.5), 100); }
+        playSwipe() { this.playTone(150, 'sine', 0.1, 0.2); }
+        startBGM() { if(this.bgmInterval || this.isMuted) return; this.bgmInterval = setInterval(() => { if(this.isMuted) return; this.playTone(this.notes[this.noteIndex], 'triangle', 0.4, 2.5); this.noteIndex = (this.noteIndex + 1) % this.notes.length; if(this.noteIndex === 0) this.playTone(130.81, 'sine', 0.8, 0.08); }, 500); }
+        stopBGM() { clearInterval(this.bgmInterval); this.bgmInterval = null; }
+    }
+    const audio = new GameAudio();
+    const gameData = [
+        { id: 1, phase: "Fase 1: Self-Regulation", situation: "Sistem komputer error! pelanggan marah dan menggebrak meja Anda.", leftAction: "'Saya juga pusing Pak, ini dari pusat!'", rightAction: "'Maaf Pak. Tim IT sedang menangani ini.'", feedbackLeft: "Emotional Contagion Negatif! Kepanikan Anda menular.", feedbackRight: "Bagus! Self-regulation Anda meredam ketegangan.", impact: { pulse: 10, safety: 5, action: 0 } },
+        { id: 2, phase: "Fase 1: Self-Regulation", situation: "Branch Manager menelepon marah-marah karena target DPK cabang meleset.", leftAction: "Menyalahkan tim marketing.", rightAction: "Terima feedback, janjikan rencana perbaikan.", feedbackLeft: "Menyalahkan orang lain merusak Psychological Safety.", feedbackRight: "Tepat. Pemimpin yang tenang menyerap stres.", impact: { pulse: 10, safety: 10, action: 0 } },
+        { id: 3, phase: "Fase 1: Self-Regulation", situation: "Seorang Teller menangis karena salah input nominal transaksi. Antrean menumpuk.", leftAction: "'Kamu ini bikin masalah saja!'", rightAction: "Diam 2 detik, hampiri dengan tenang.", feedbackLeft: "Reaksi Anda memicu 'Fight or Flight' di otak Teller.", feedbackRight: "Ketenangan Anda menstabilkan saraf otonom staf.", impact: { pulse: 15, safety: 15, action: 0 } },
+        { id: 4, phase: "Fase 2: Creating Safety", situation: "Melanjutkan kasus Teller tadi. Anda harus merespons kesalahannya.", leftAction: "'Minggir, biar saya saja yang selesaikan!'", rightAction: "'Tidak apa-apa, ayo kita koreksi perlahan.'", feedbackLeft: "Mengambil alih paksa membunuh kepercayaan diri.", feedbackRight: "Psychological Safety tercipta.", impact: { pulse: 10, safety: 20, action: 5 } },
+        { id: 5, phase: "Fase 2: Creating Safety", situation: "CS Junior mengusulkan ide 'nyeleneh' untuk bypass sistem antrean.", leftAction: "'Ikuti saja SOP! Jangan macam-macam!'", rightAction: "'Ide menarik. Mari pastikan risikonya.'", feedbackLeft: "Inovasi mati ketika rasa aman ditekan.", feedbackRight: "Anda menciptakan ruang di mana ide berani disuarakan.", impact: { pulse: 5, safety: 15, action: 10 } },
+        { id: 6, phase: "Fase 2: Creating Safety", situation: "Terjadi miskomunikasi operasional antara tim CS dan Teller.", leftAction: "'Kalian berdua ini bagaimana kerjanya?'", rightAction: "'Mari kumpul sebentar. Apa kendalanya?'", feedbackLeft: "Finger-pointing menghancurkan kekompakan.", feedbackRight: "Fokus pada masalah, bukan menyalahkan.", impact: { pulse: 10, safety: 15, action: 10 } },
+        { id: 7, phase: "Fase 3: Action Plan", situation: "Sistem belum pulih. Antrean reguler tumpah ruah.", leftAction: "'Semuanya ayo kerja lebih cepat!'", rightAction: "'Budi urus VIP, Sari bantu reguler.'", feedbackLeft: "Instruksi tidak jelas membuat tim bingung.", feedbackRight: "Kalimat asertif adalah kunci eksekusi.", impact: { pulse: 5, safety: 5, action: 20 } },
+        { id: 8, phase: "Fase 3: Action Plan", situation: "Pusat mengabarkan server mati total 1 jam ke depan.", leftAction: "Suruh menunggu tanpa solusi.", rightAction: "Bagikan form data manual.", feedbackLeft: "Kepemimpinan pasif menyebabkan ketidakpuasan.", feedbackRight: "Action Plan tereksekusi!", impact: { pulse: 5, safety: 5, action: 25 } },
+        { id: 9, phase: "Fase 3: Action Plan", situation: "pelanggan meminta kompensasi karena jadwal mereka berantakan.", leftAction: "'Bukan tanggung jawab cabang.'", rightAction: "'Catat nomor HP, kami hubungi segera.'", feedbackLeft: "Respons lepas tangan merusak citra.", feedbackRight: "Rencana aksi menjaga kepastian.", impact: { pulse: 5, safety: 5, action: 20 } },
+        { id: 10, phase: "Fase 3: Action Plan", situation: "Jam kerja usai. Cabang akhirnya tutup setelah hari yang melelahkan.", leftAction: "'Akhirnya beres juga, nyebelin banget.'", rightAction: "'Terima kasih kerja kerasnya, besok evaluasi.'", feedbackLeft: "Mengeluh meninggalkan residu stres.", feedbackRight: "Sempurna! Anda menutup krisis dengan apresiasi.", impact: { pulse: 15, safety: 10, action: 10 } }
+    ];
+
+    const state = { player: { name: "", nik: "" }, currentCardIndex: 0, meters: { pulse: 40, safety: 40, action: 20 }, history: [], timer: 10, timerInterval: null, isGameOver: false, badges: { phase1: false, phase2: false }, isSwapped: false };
+    const UI = {
+        btnStart: document.getElementById('btn-start'), inputName: document.getElementById('input-name'), inputNik: document.getElementById('input-nik'), errorLogin: document.getElementById('error-login'), btnAudio: document.getElementById('btn-audio'),
+        displayName: document.getElementById('display-name'), displayNik: document.getElementById('display-nik'), timerDisplay: document.getElementById('timer-display'),
+        barPulse: document.getElementById('bar-pulse'), barSafety: document.getElementById('bar-safety'), barAction: document.getElementById('bar-action'), barProgress: document.getElementById('bar-progress'), progressText: document.getElementById('progress-text'),
+        cardContainer: document.getElementById('card-container'), btnLeft: document.getElementById('btn-swipe-left'), btnRight: document.getElementById('btn-swipe-right'),
+        feedbackOverlay: document.getElementById('feedback-overlay'), feedbackTitle: document.getElementById('feedback-title'), feedbackDesc: document.getElementById('feedback-desc'), badgeNotification: document.getElementById('badge-notification'), badgeText: document.getElementById('badge-text'),
+        resultTitle: document.getElementById('result-title'), resultMessage: document.getElementById('result-message'), finalPulse: document.getElementById('final-pulse'), finalSafety: document.getElementById('final-safety'), finalAction: document.getElementById('final-action'), debriefList: document.getElementById('debrief-list'), btnRestart: document.getElementById('btn-restart')
+    };
+
+    function switchScreen(screenName) { ['login', 'game', 'result'].forEach(s => document.getElementById('screen-' + s).classList.remove('active')); document.getElementById('screen-' + screenName).classList.add('active'); }
+    
+    UI.btnStart.addEventListener('click', () => {
+        const name = UI.inputName.value.trim(), nik = UI.inputNik.value.trim();
+        if(name === "" || !/^\d{10}$/.test(nik)) { UI.errorLogin.style.display = "block"; return; }
+        state.player = { name, nik }; UI.displayName.innerText = name; UI.displayNik.innerText = nik;
+        audio.init(); audio.startBGM(); switchScreen('game'); renderCard();
+    });
+
+    UI.btnAudio.addEventListener('click', () => { audio.init(); const muted = audio.toggleMute(); UI.btnAudio.innerText = muted ? '🔇' : '🔊'; });
+
+    function renderCard() {
+        if(state.isGameOver) return;
+        if(state.currentCardIndex >= gameData.length) { endGame(true); return; }
+        
+        const data = gameData[state.currentCardIndex];
+        state.isSwapped = Math.random() > 0.5; // Randomize swipe direction
+        
+        const leftText = state.isSwapped ? data.rightAction : data.leftAction;
+        const rightText = state.isSwapped ? data.leftAction : data.rightAction;
+
+        UI.barProgress.style.width = `${(state.currentCardIndex / gameData.length) * 100}%`;
+        UI.progressText.innerText = `${state.currentCardIndex + 1}/${gameData.length}`;
+
+        const cardEl = document.createElement('div');
+        cardEl.className = 'game-card clay-card';
+        cardEl.innerHTML = `
+            <div class="card-phase">${data.phase}</div>
+            <div class="card-situation">${data.situation}</div>
+            <div class="swipe-indicators">
+                <div class="swipe-hint swipe-hint-left"><strong>⬅️ KIRI</strong><br><span style="font-size: 0.75rem;">${leftText}</span></div>
+                <div class="swipe-hint swipe-hint-right"><strong>KANAN ➡️</strong><br><span style="font-size: 0.75rem;">${rightText}</span></div>
+            </div>
+        `;
+        UI.cardContainer.innerHTML = ''; UI.cardContainer.appendChild(cardEl);
+        setupSwipe(cardEl);
+        startTimer();
+    }
+
+    function startTimer() {
+        clearInterval(state.timerInterval); state.timer = 7; UI.timerDisplay.innerText = state.timer;
+        state.timerInterval = setInterval(() => {
+            state.timer--; UI.timerDisplay.innerText = state.timer;
+            if(state.timer <= 3) audio.playSwipe();
+            if(state.timer <= 0) { clearInterval(state.timerInterval); handleChoice('timeout'); }
+        }, 1000);
+    }
+
+    function handleChoice(direction) {
+        clearInterval(state.timerInterval);
+        const data = gameData[state.currentCardIndex];
+        
+        // Correct isRegulatedChosen logic based on swap state
+        const isRegulatedChosen = (state.isSwapped && direction === 'left') || (!state.isSwapped && direction === 'right');
+        
+        let isCorrect = isRegulatedChosen;
+        let feedback = isCorrect ? data.feedbackRight : data.feedbackLeft;
+
+        if(direction === 'timeout') { isCorrect = false; feedback = "Waktu Habis! Kelambanan pemimpin dalam krisis memicu kebingungan tim."; }
+        
+        if(isCorrect) {
+            updateMeters(data.impact.pulse, data.impact.safety, data.impact.action);
+            audio.playCorrect();
+        } else {
+            updateMeters(direction === 'timeout' ? -10 : -15, -15, -5);
+            audio.playWrong();
+        }
+
+        state.history.push({ situation: data.situation, isCorrect, feedback });
+        showFeedback(isCorrect, feedback, () => {
+            state.currentCardIndex++;
+            if(!state.isGameOver) renderCard();
+        });
+    }
+
+    function showFeedback(isCorrect, text, callback) {
+        UI.feedbackOverlay.style.borderColor = isCorrect ? 'var(--color-success)' : 'var(--color-danger)';
+        UI.feedbackTitle.innerText = isCorrect ? '✅ Solusi Tepat!' : '❌ Respons Reaktif';
+        UI.feedbackTitle.style.color = isCorrect ? 'var(--color-success)' : 'var(--color-danger)';
+        UI.feedbackDesc.innerText = text;
+        UI.feedbackOverlay.classList.add('show');
+        setTimeout(() => { UI.feedbackOverlay.classList.remove('show'); setTimeout(callback, 300); }, 2500);
+    }
+
+    function updateMeters(pulseDelta, safetyDelta, actionDelta) {
+        state.meters.pulse = Math.max(0, Math.min(100, state.meters.pulse + pulseDelta));
+        state.meters.safety = Math.max(0, Math.min(100, state.meters.safety + safetyDelta));
+        state.meters.action = Math.max(0, Math.min(100, state.meters.action + actionDelta));
+        UI.barPulse.style.width = `${state.meters.pulse}%`; UI.barSafety.style.width = `${state.meters.safety}%`; UI.barAction.style.width = `${state.meters.action}%`;
+        if(state.meters.pulse === 0) endGame(false, "Kantor cabang chaos karena iklim emosi (Pulse) hancur.");
+    }
+
+    function setupSwipe(card) {
+        let startX = 0, isDragging = false;
+        const move = (x) => { card.style.transform = `translateX(${x - startX}px) rotate(${(x - startX) * 0.05}deg)`; };
+        const end = (x) => {
+            isDragging = false;
+            const diff = x - startX;
+            if(Math.abs(diff) > 100) { 
+                card.style.opacity = '0';
+                setTimeout(() => handleChoice(diff > 0 ? 'right' : 'left'), 300);
+            } else { card.style.transform = 'translateX(0) rotate(0)'; }
+        };
+        card.addEventListener('touchstart', e => { startX = e.touches[0].clientX; isDragging = true; });
+        card.addEventListener('touchmove', e => { if(isDragging) move(e.touches[0].clientX); });
+        card.addEventListener('touchend', e => { if(isDragging) end(e.changedTouches[0].clientX); });
+        card.addEventListener('mousedown', e => { startX = e.clientX; isDragging = true; });
+        window.addEventListener('mousemove', e => { if(isDragging) move(e.clientX); });
+        window.addEventListener('mouseup', e => { if(isDragging) end(e.clientX); });
+    }
+
+    UI.btnLeft.addEventListener('click', () => handleChoice('left'));
+    UI.btnRight.addEventListener('click', () => handleChoice('right'));
+
+    function endGame(completedAll, reason = "") {
+        state.isGameOver = true; clearInterval(state.timerInterval); audio.stopBGM();
+        switchScreen('result');
+        UI.resultTitle.innerText = completedAll ? "🌟 Simulasi Selesai!" : "⚠️ Simulasi Berakhir";
+        UI.resultMessage.innerText = reason || "Terima kasih atas partisipasi Anda dalam latihan kepemimpinan krisis.";
+        UI.finalPulse.innerText = state.meters.pulse + "%"; UI.finalSafety.innerText = state.meters.safety + "%"; UI.finalAction.innerText = state.meters.action + "%";
+        UI.debriefList.innerHTML = state.history.map((log, i) => `<div class="clay-panel debrief-item ${log.isCorrect ? 'correct' : 'wrong'}"><strong>Kasus ${i + 1}:</strong> ${log.situation}<br><em>${log.feedback}</em></div>`).join('');
+    }
+    UI.btnRestart.addEventListener('click', () => location.reload());
+</script>
+</body>
+</html>
